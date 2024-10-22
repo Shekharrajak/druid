@@ -33,6 +33,7 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.iceberg.catalog.IcebergCatalog;
 import org.apache.druid.iceberg.filter.IcebergFilter;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -81,7 +82,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
       @JsonProperty("tableName") String tableName,
       @JsonProperty("namespace") String namespace,
       @JsonProperty("icebergFilter") @Nullable IcebergFilter icebergFilter,
-      @JsonProperty("icebergCatalog") IcebergCatalog icebergCatalog,
+      @JsonProperty("catalog") IcebergCatalog icebergCatalog,
       @JsonProperty("warehouseSource") InputSourceFactory warehouseSource,
       @JsonProperty("snapshotTime") @Nullable DateTime snapshotTime
   )
