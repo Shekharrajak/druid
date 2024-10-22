@@ -25,14 +25,12 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.LocalInputSourceFactory;
+import org.apache.druid.iceberg.catalog.IcebergCatalog;
 import org.apache.druid.iceberg.filter.IcebergEqualsFilter;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.iceberg.DataFile;
-import org.apache.iceberg.Files;
-import org.apache.iceberg.PartitionSpec;
-import org.apache.iceberg.Schema;
-import org.apache.iceberg.Table;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericRecord;
@@ -50,6 +48,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -62,6 +62,7 @@ import java.util.stream.Stream;
 
 public class IcebergInputSourceTest
 {
+  private static final Logger log = LoggerFactory.getLogger(IcebergInputSourceTest.class);
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -82,7 +83,12 @@ public class IcebergInputSourceTest
   public void setup() throws IOException
   {
     warehouseDir = FileUtils.createTempDir();
-    testCatalog = new LocalCatalog(warehouseDir.getPath(), new HashMap<>(), true);
+    log.info(warehouseDir.getPath());
+    log.info(String.valueOf(warehouseDir));
+    Map<String, String>  options = new HashMap<>();
+    options.put(CatalogUtil.ICEBERG_CATALOG_TYPE, CatalogUtil.ICEBERG_CATALOG_TYPE_HADOOP);
+    options.put(CatalogProperties.WAREHOUSE_LOCATION, "/tmp/warehouse/test");
+    testCatalog = new IcebergCatalog("iceberg-hadoop-catalog", options, new Configuration(), null);
     tableIdentifier = TableIdentifier.of(Namespace.of(NAMESPACE), TABLENAME);
 
     createAndLoadTable(tableIdentifier);
@@ -191,7 +197,11 @@ public class IcebergInputSourceTest
   @Test
   public void testCaseInsensitiveFiltering() throws IOException
   {
-    LocalCatalog caseInsensitiveCatalog = new LocalCatalog(warehouseDir.getPath(), new HashMap<>(), false);
+//    LocalCatalog caseInsensitiveCatalog = new LocalCatalog(warehouseDir.getPath(), new HashMap<>(), false);
+    Map<String, String>  options = new HashMap<>();
+    options.put(CatalogUtil.ICEBERG_CATALOG_TYPE, CatalogUtil.ICEBERG_CATALOG_TYPE_HADOOP);
+    options.put(CatalogProperties.WAREHOUSE_LOCATION, "/tmp/warehouse/test");
+    IcebergCatalog caseInsensitiveCatalog = new IcebergCatalog("iceberg-hadoop-catalog",options, new Configuration(),false);
     Table icebergTableFromSchema = testCatalog.retrieveCatalog().loadTable(tableIdentifier);
 
     icebergTableFromSchema.updateSchema().renameColumn("name", "Name").commit();
