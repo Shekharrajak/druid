@@ -26,7 +26,7 @@ public class IcebergCatalog implements InputCatalog {
     public static final String TYPE_KEY = "iceberg-catalog";
 
     @JsonProperty
-    private final String catalogType;
+    private final String catalogName;
     @JsonProperty
     private final Map<String, String> catalogProperties;
     @JsonProperty
@@ -34,7 +34,7 @@ public class IcebergCatalog implements InputCatalog {
     @JsonProperty
     private final Boolean caseSensitive;
     public Catalog retrieveCatalog() {
-        return CatalogUtil.buildIcebergCatalog(catalogType, catalogProperties, hadoopConfiguration);
+        return CatalogUtil.buildIcebergCatalog(catalogName, catalogProperties, hadoopConfiguration);
     }
 
     public boolean isCaseSensitive()
@@ -43,12 +43,12 @@ public class IcebergCatalog implements InputCatalog {
     }
     @JsonCreator
     public IcebergCatalog(
-            @JsonProperty("catalogType") String catalogType,
+            @JsonProperty("catalogName") String catalogName,
             @JsonProperty("catalogProperties") Map<String, String> catalogProperties,
             @JsonProperty("hadoopConfiguration") Configuration hadoopConfiguration,
             @JsonProperty("caseSensitive") Boolean caseSensitive) {
-        Preconditions.checkNotNull(catalogType, "You must specify Iceberg supported catalog type");
-        this.catalogType = catalogType;
+        Preconditions.checkNotNull(catalogProperties, "You must specify Iceberg supported catalogProperties");
+        this.catalogName = catalogName;
         this.catalogProperties = catalogProperties;
         this.hadoopConfiguration = hadoopConfiguration;
         this.caseSensitive = caseSensitive == null || caseSensitive;;
@@ -113,5 +113,9 @@ public class IcebergCatalog implements InputCatalog {
             Thread.currentThread().setContextClassLoader(currCtxClassloader);
         }
         return dataFilePaths;
+    }
+    public Map<String, String> getCatalogProperties()
+    {
+        return catalogProperties;
     }
 }

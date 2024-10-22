@@ -22,8 +22,11 @@ package org.apache.druid.iceberg.input;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.net.HttpHeaders;
 import com.sun.net.httpserver.HttpServer;
+import org.apache.druid.iceberg.catalog.IcebergCatalog;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.iceberg.CatalogProperties;
+import org.apache.iceberg.CatalogUtil;
 import org.apache.iceberg.rest.RESTCatalog;
 import org.junit.After;
 import org.junit.Assert;
@@ -36,6 +39,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.Map;
 
 public class RestCatalogTest
 {
@@ -72,19 +76,22 @@ public class RestCatalogTest
   public void testCatalogCreate()
   {
     String catalogUri = "http://localhost:" + port;
+      Map<String, String> options = new HashMap<>();
+      options.put(CatalogUtil.ICEBERG_CATALOG_TYPE, CatalogUtil.ICEBERG_CATALOG_TYPE_REST);
+      options.put(CatalogProperties.URI, catalogUri);
+      IcebergCatalog testRestCatalog = new IcebergCatalog(
+              "rest-catalog",
+              options,
+              new Configuration(),
+              false
+      );
 
-    RestIcebergCatalog testRestCatalog = new RestIcebergCatalog(
-        catalogUri,
-        new HashMap<>(),
-        mapper,
-        new Configuration()
-    );
     RESTCatalog innerCatalog = (RESTCatalog) testRestCatalog.retrieveCatalog();
 
-    Assert.assertEquals("rest", innerCatalog.name());
+    Assert.assertEquals("rest-catalog", innerCatalog.name());
     Assert.assertNotNull(innerCatalog.properties());
     Assert.assertNotNull(testRestCatalog.getCatalogProperties());
-    Assert.assertEquals(testRestCatalog.getCatalogUri(), innerCatalog.properties().get("uri"));
+    Assert.assertEquals(testRestCatalog.getCatalogProperties().get("uri"), innerCatalog.properties().get("uri"));
   }
   @After
   public void tearDown() throws IOException

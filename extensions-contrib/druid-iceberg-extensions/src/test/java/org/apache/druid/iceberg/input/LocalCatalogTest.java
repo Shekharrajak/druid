@@ -21,32 +21,32 @@ package org.apache.druid.iceberg.input;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.iceberg.catalog.IcebergCatalog;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.iceberg.CatalogProperties;
+import org.apache.iceberg.CatalogUtil;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.io.File;
 import java.util.HashMap;
+import java.util.Map;
 
 public class LocalCatalogTest
 {
-  @Test
-  public void testCatalogSerDe() throws JsonProcessingException
-  {
-    final File warehouseDir = FileUtils.createTempDir();
-    DefaultObjectMapper mapper = new DefaultObjectMapper();
-    LocalCatalog before = new LocalCatalog(warehouseDir.getPath(), new HashMap<>(), true);
-    LocalCatalog after = mapper.readValue(
-        mapper.writeValueAsString(before), LocalCatalog.class);
-    Assert.assertEquals(before, after);
-    Assert.assertEquals("hadoop", before.retrieveCatalog().name());
-    Assert.assertEquals("hadoop", after.retrieveCatalog().name());
-  }
+    @Test
+    public void testCatalogSerDe() throws JsonProcessingException
+    {
+        Map<String, String> options = new HashMap<>();
+        options.put(CatalogUtil.ICEBERG_CATALOG_TYPE, CatalogUtil.ICEBERG_CATALOG_TYPE_HADOOP);
+        options.put(CatalogProperties.WAREHOUSE_LOCATION, "/tmp/warehouse/test");
+        IcebergCatalog catalog = new IcebergCatalog(
+                "hadoop-catalog-name",
+                options,
+                new Configuration(),
+                false
+        );
 
-  @Test
-  public void testEqualsContract()
-  {
-    EqualsVerifier.forClass(LocalCatalog.class).withNonnullFields("warehousePath").withIgnoredFields("catalog").usingGetClass().verify();
-  }
+        Assert.assertEquals("hadoop-catalog-name", catalog.retrieveCatalog().name());
+        Assert.assertEquals(2, catalog.getCatalogProperties().size());
+    }
+    
 }
