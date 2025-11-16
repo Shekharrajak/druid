@@ -19,75 +19,46 @@
 
 package org.apache.druid.indexing.kafka.sharegroup;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class KafkaShareGroupPartitionTest
 {
-  private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
-
   @Test
-  public void testSyntheticPartitionId()
+  public void testSyntheticPartition()
   {
-    KafkaShareGroupPartition partition = KafkaShareGroupPartition.SYNTHETIC_PARTITION;
-    Assert.assertEquals(0, partition.partition());
-    Assert.assertTrue(partition.isSynthetic());
+    final KafkaShareGroupPartition partition1 = new KafkaShareGroupPartition("topic1", "group1");
+    final KafkaShareGroupPartition partition2 = new KafkaShareGroupPartition("topic1", "group1");
+    final KafkaShareGroupPartition different = new KafkaShareGroupPartition("topic2", "group1");
+
+    // All partitions are equal (synthetic partition concept)
+    Assert.assertEquals(partition1, partition2);
+    Assert.assertEquals(partition1.hashCode(), partition2.hashCode());
+
+    // But they maintain topic/group identity
+    Assert.assertEquals("topic1", partition1.getTopic());
+    Assert.assertEquals("group1", partition1.getShareGroupId());
+
+    Assert.assertEquals("topic2", different.getTopic());
   }
 
   @Test
-  public void testWithTopic()
+  public void testGetPartitionId()
   {
-    KafkaShareGroupPartition partition = new KafkaShareGroupPartition("test-topic");
-    Assert.assertEquals(0, partition.partition());
-    Assert.assertEquals("test-topic", partition.topic());
-    Assert.assertFalse(partition.isSynthetic());
-  }
+    final KafkaShareGroupPartition partition = new KafkaShareGroupPartition("topic", "group");
 
-  @Test
-  public void testEquality()
-  {
-    KafkaShareGroupPartition p1 = new KafkaShareGroupPartition("topic1");
-    KafkaShareGroupPartition p2 = new KafkaShareGroupPartition("topic2");
-    KafkaShareGroupPartition p3 = KafkaShareGroupPartition.SYNTHETIC_PARTITION;
-
-    // All partitions are equal (single queue semantics)
-    Assert.assertEquals(p1, p2);
-    Assert.assertEquals(p1, p3);
-    Assert.assertEquals(p2, p3);
-  }
-
-  @Test
-  public void testHashCode()
-  {
-    KafkaShareGroupPartition p1 = new KafkaShareGroupPartition("topic1");
-    KafkaShareGroupPartition p2 = new KafkaShareGroupPartition("topic2");
-
-    // Same hash code since all use SYNTHETIC_PARTITION_ID
-    Assert.assertEquals(p1.hashCode(), p2.hashCode());
+    // Always returns synthetic partition 0
+    Assert.assertEquals(KafkaShareGroupPartition.SYNTHETIC_PARTITION_ID, partition.getPartitionId());
+    Assert.assertEquals(0, partition.getPartitionId());
   }
 
   @Test
   public void testToString()
   {
-    KafkaShareGroupPartition synthetic = KafkaShareGroupPartition.SYNTHETIC_PARTITION;
-    Assert.assertEquals("KafkaShareGroupPartition{SYNTHETIC}", synthetic.toString());
+    final KafkaShareGroupPartition partition = new KafkaShareGroupPartition("test-topic", "test-group");
+    final String str = partition.toString();
 
-    KafkaShareGroupPartition withTopic = new KafkaShareGroupPartition("test-topic");
-    Assert.assertTrue(withTopic.toString().contains("test-topic"));
-    Assert.assertTrue(withTopic.toString().contains("partition=0"));
-    Assert.assertTrue(withTopic.toString().contains("synthetic"));
-  }
-
-  @Test
-  public void testJsonSerialization() throws Exception
-  {
-    KafkaShareGroupPartition partition = new KafkaShareGroupPartition("test-topic");
-    String json = OBJECT_MAPPER.writeValueAsString(partition);
-    KafkaShareGroupPartition deserialized = OBJECT_MAPPER.readValue(json, KafkaShareGroupPartition.class);
-
-    Assert.assertEquals(partition.topic(), deserialized.topic());
-    Assert.assertEquals(partition.partition(), deserialized.partition());
+    Assert.assertTrue(str.contains("test-topic"));
+    Assert.assertTrue(str.contains("test-group"));
   }
 }

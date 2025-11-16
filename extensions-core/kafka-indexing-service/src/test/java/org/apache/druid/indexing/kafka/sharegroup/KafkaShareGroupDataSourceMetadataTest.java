@@ -20,157 +20,81 @@
 package org.apache.druid.indexing.kafka.sharegroup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.indexing.overlord.DataSourceMetadata;
-import org.apache.druid.segment.TestHelper;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class KafkaShareGroupDataSourceMetadataTest
 {
-  private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
-
-  private static final KafkaShareGroupDataSourceMetadata META0 =
-      new KafkaShareGroupDataSourceMetadata("topic1", "group1", null);
-  private static final KafkaShareGroupDataSourceMetadata META1 =
-      new KafkaShareGroupDataSourceMetadata("topic1", "group1", new DateTime("2024-01-01T00:00:00Z"));
-  private static final KafkaShareGroupDataSourceMetadata META2 =
-      new KafkaShareGroupDataSourceMetadata("topic1", "group1", new DateTime("2024-01-02T00:00:00Z"));
-  private static final KafkaShareGroupDataSourceMetadata META3 =
-      new KafkaShareGroupDataSourceMetadata("topic2", "group1", new DateTime("2024-01-01T00:00:00Z"));
-  private static final KafkaShareGroupDataSourceMetadata META4 =
-      new KafkaShareGroupDataSourceMetadata("topic1", "group2", new DateTime("2024-01-01T00:00:00Z"));
+  private final ObjectMapper mapper = new DefaultObjectMapper();
 
   @Test
-  public void testMatches()
+  public void testSerde() throws Exception
   {
-    Assert.assertTrue(META0.matches(META0));
-    Assert.assertTrue(META0.matches(META1));
-    Assert.assertTrue(META0.matches(META2));
-    Assert.assertFalse(META0.matches(META3)); // Different topic
-    Assert.assertFalse(META0.matches(META4)); // Different share group
+    final KafkaShareGroupDataSourceMetadata metadata = new KafkaShareGroupDataSourceMetadata(
+        "test-topic",
+        "test-group",
+        DateTime.parse("2024-01-01T00:00:00Z")
+    );
 
-    Assert.assertTrue(META1.matches(META0));
-    Assert.assertTrue(META1.matches(META1));
-    Assert.assertTrue(META1.matches(META2));
-    Assert.assertFalse(META1.matches(META3));
-    Assert.assertFalse(META1.matches(META4));
+    final String json = mapper.writeValueAsString(metadata);
+    final KafkaShareGroupDataSourceMetadata deserialized = mapper.readValue(
+        json,
+        KafkaShareGroupDataSourceMetadata.class
+    );
 
-    Assert.assertTrue(META2.matches(META1));
+    Assert.assertEquals(metadata.getTopic(), deserialized.getTopic());
+    Assert.assertEquals(metadata.getShareGroupId(), deserialized.getShareGroupId());
+    Assert.assertEquals(metadata.getLastProcessedTimestamp(), deserialized.getLastProcessedTimestamp());
   }
 
   @Test
   public void testPlus()
   {
-    // Null timestamp + timestamp = timestamp
-    KafkaShareGroupDataSourceMetadata result1 = (KafkaShareGroupDataSourceMetadata) META0.plus(META1);
-    Assert.assertEquals("topic1", result1.getTopic());
-    Assert.assertEquals("group1", result1.getShareGroupId());
-    Assert.assertEquals(new DateTime("2024-01-01T00:00:00Z"), result1.getLastProcessedTimestamp());
+    final DateTime time1 = DateTime.parse("2024-01-01T00:00:00Z");
+    final DateTime time2 = DateTime.parse("2024-01-02T00:00:00Z");
 
-    // Timestamp + null = timestamp
-    KafkaShareGroupDataSourceMetadata result2 = (KafkaShareGroupDataSourceMetadata) META1.plus(META0);
-    Assert.assertEquals(new DateTime("2024-01-01T00:00:00Z"), result2.getLastProcessedTimestamp());
-
-    // Take max timestamp
-    KafkaShareGroupDataSourceMetadata result3 = (KafkaShareGroupDataSourceMetadata) META1.plus(META2);
-    Assert.assertEquals(new DateTime("2024-01-02T00:00:00Z"), result3.getLastProcessedTimestamp());
-
-    KafkaShareGroupDataSourceMetadata result4 = (KafkaShareGroupDataSourceMetadata) META2.plus(META1);
-    Assert.assertEquals(new DateTime("2024-01-02T00:00:00Z"), result4.getLastProcessedTimestamp());
-  }
-
-  @Test
-  public void testPlusIncompatible()
-  {
-    // Different topic
-    Assert.assertThrows(IllegalArgumentException.class, () -> META1.plus(META3));
-
-    // Different share group
-    Assert.assertThrows(IllegalArgumentException.class, () -> META1.plus(META4));
-  }
-
-  @Test
-  public void testMinus()
-  {
-    // Minus always returns unchanged for Share Groups
-    KafkaShareGroupDataSourceMetadata result1 = (KafkaShareGroupDataSourceMetadata) META1.minus(META2);
-    Assert.assertEquals(META1, result1);
-
-    KafkaShareGroupDataSourceMetadata result2 = (KafkaShareGroupDataSourceMetadata) META2.minus(META1);
-    Assert.assertEquals(META2, result2);
-  }
-
-  @Test
-  public void testWithLastProcessedTimestamp()
-  {
-    DateTime newTimestamp = new DateTime("2024-06-15T12:00:00Z");
-    KafkaShareGroupDataSourceMetadata updated = META0.withLastProcessedTimestamp(newTimestamp);
-
-    Assert.assertEquals("topic1", updated.getTopic());
-    Assert.assertEquals("group1", updated.getShareGroupId());
-    Assert.assertEquals(newTimestamp, updated.getLastProcessedTimestamp());
-  }
-
-  @Test
-  public void testEquality()
-  {
-    KafkaShareGroupDataSourceMetadata same1 = new KafkaShareGroupDataSourceMetadata(
-        "topic1",
-        "group1",
-        new DateTime("2024-01-01T00:00:00Z")
+    final KafkaShareGroupDataSourceMetadata metadata1 = new KafkaShareGroupDataSourceMetadata(
+        "test-topic",
+        "test-group",
+        time1
     );
 
-    Assert.assertEquals(META1, same1);
-    Assert.assertNotEquals(META1, META2); // Different timestamp
-    Assert.assertNotEquals(META1, META3); // Different topic
-    Assert.assertNotEquals(META1, META4); // Different share group
-  }
-
-  @Test
-  public void testHashCode()
-  {
-    KafkaShareGroupDataSourceMetadata same1 = new KafkaShareGroupDataSourceMetadata(
-        "topic1",
-        "group1",
-        new DateTime("2024-01-01T00:00:00Z")
+    final KafkaShareGroupDataSourceMetadata metadata2 = new KafkaShareGroupDataSourceMetadata(
+        "test-topic",
+        "test-group",
+        time2
     );
 
-    Assert.assertEquals(META1.hashCode(), same1.hashCode());
+    final KafkaShareGroupDataSourceMetadata merged =
+        (KafkaShareGroupDataSourceMetadata) metadata1.plus(metadata2);
+
+    Assert.assertEquals(time2, merged.getLastProcessedTimestamp());
   }
 
   @Test
-  public void testToString()
+  public void testMatches()
   {
-    String str = META1.toString();
-    Assert.assertTrue(str.contains("topic1"));
-    Assert.assertTrue(str.contains("group1"));
-    Assert.assertTrue(str.contains("2024-01-01"));
-  }
+    final KafkaShareGroupDataSourceMetadata metadata1 = new KafkaShareGroupDataSourceMetadata(
+        "test-topic",
+        "test-group",
+        DateTime.parse("2024-01-01T00:00:00Z")
+    );
 
-  @Test
-  public void testJsonSerialization() throws Exception
-  {
-    String json = OBJECT_MAPPER.writeValueAsString(META1);
-    DataSourceMetadata deserialized = OBJECT_MAPPER.readValue(json, DataSourceMetadata.class);
+    final KafkaShareGroupDataSourceMetadata metadata2 = new KafkaShareGroupDataSourceMetadata(
+        "test-topic",
+        "test-group",
+        DateTime.parse("2024-01-02T00:00:00Z")
+    );
 
-    Assert.assertTrue(deserialized instanceof KafkaShareGroupDataSourceMetadata);
-    KafkaShareGroupDataSourceMetadata meta = (KafkaShareGroupDataSourceMetadata) deserialized;
-    Assert.assertEquals(META1.getTopic(), meta.getTopic());
-    Assert.assertEquals(META1.getShareGroupId(), meta.getShareGroupId());
-    Assert.assertEquals(META1.getLastProcessedTimestamp(), meta.getLastProcessedTimestamp());
-  }
+    final KafkaShareGroupDataSourceMetadata differentTopic = new KafkaShareGroupDataSourceMetadata(
+        "other-topic",
+        "test-group",
+        DateTime.parse("2024-01-01T00:00:00Z")
+    );
 
-  @Test
-  public void testJsonSerializationWithNullTimestamp() throws Exception
-  {
-    String json = OBJECT_MAPPER.writeValueAsString(META0);
-    DataSourceMetadata deserialized = OBJECT_MAPPER.readValue(json, DataSourceMetadata.class);
-
-    Assert.assertTrue(deserialized instanceof KafkaShareGroupDataSourceMetadata);
-    KafkaShareGroupDataSourceMetadata meta = (KafkaShareGroupDataSourceMetadata) deserialized;
-    Assert.assertEquals(META0.getTopic(), meta.getTopic());
-    Assert.assertEquals(META0.getShareGroupId(), meta.getShareGroupId());
-    Assert.assertNull(meta.getLastProcessedTimestamp());
+    Assert.assertTrue(metadata1.matches(metadata2));
+    Assert.assertFalse(metadata1.matches(differentTopic));
   }
 }

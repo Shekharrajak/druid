@@ -26,6 +26,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.data.input.kafkainput.KafkaInputFormat;
+import org.apache.druid.indexing.kafka.sharegroup.KafkaShareGroupDataSourceMetadata;
+import org.apache.druid.indexing.kafka.sharegroup.KafkaShareGroupIndexTask;
+import org.apache.druid.indexing.kafka.sharegroup.KafkaShareGroupIndexTaskIOConfig;
+import org.apache.druid.indexing.kafka.sharegroup.KafkaShareGroupIndexTaskTuningConfig;
+import org.apache.druid.indexing.kafka.sharegroup.KafkaShareGroupSupervisorIOConfig;
+import org.apache.druid.indexing.kafka.sharegroup.KafkaShareGroupSupervisorSpec;
+import org.apache.druid.indexing.kafka.sharegroup.KafkaShareGroupSupervisorTuningConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import org.apache.druid.initialization.DruidModule;
@@ -42,6 +49,7 @@ public class KafkaIndexTaskModule implements DruidModule
     return ImmutableList.of(
         new SimpleModule(getClass().getSimpleName())
             .registerSubtypes(
+                // Regular Kafka partition-based
                 new NamedType(KafkaIndexTask.class, "index_kafka"),
                 new NamedType(KafkaDataSourceMetadata.class, SCHEME),
                 new NamedType(KafkaIndexTaskIOConfig.class, SCHEME),
@@ -51,7 +59,16 @@ public class KafkaIndexTaskModule implements DruidModule
                 new NamedType(KafkaSupervisorTuningConfig.class, SCHEME),
                 new NamedType(KafkaSupervisorSpec.class, SCHEME),
                 new NamedType(KafkaSamplerSpec.class, SCHEME),
-                new NamedType(KafkaInputFormat.class, SCHEME)
+                new NamedType(KafkaInputFormat.class, SCHEME),
+
+                // Kafka Share Group queue-based
+                new NamedType(KafkaShareGroupIndexTask.class, "index_kafka_share_group"),
+                new NamedType(KafkaShareGroupDataSourceMetadata.class, "kafka_share_group"),
+                new NamedType(KafkaShareGroupIndexTaskIOConfig.class, "kafka_share_group_io"),
+                new NamedType(KafkaShareGroupIndexTaskTuningConfig.class, "kafka_share_group_tuning"),
+                new NamedType(KafkaShareGroupSupervisorIOConfig.class, "kafka_share_group_supervisor_io"),
+                new NamedType(KafkaShareGroupSupervisorTuningConfig.class, "kafka_share_group_supervisor_tuning"),
+                new NamedType(KafkaShareGroupSupervisorSpec.class, "kafka_share_group")
             )
             .addKeySerializer(KafkaTopicPartition.class, new KafkaTopicPartition.KafkaTopicPartitionKeySerializer())
     );
