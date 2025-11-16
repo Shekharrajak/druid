@@ -20,13 +20,14 @@
 package org.apache.druid.indexing.kafka.sharegroup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueue;
-import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
@@ -37,12 +38,10 @@ import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -232,13 +231,14 @@ public class KafkaShareGroupSupervisor implements Supervisor
       final KafkaShareGroupIndexTaskIOConfig taskIOConfig = new KafkaShareGroupIndexTaskIOConfig(
           spec.getIoConfig().getTopic(),
           spec.getIoConfig().getShareGroupId(),
-          spec.getIoConfig().getInputFormat(),
           spec.getIoConfig().getConsumerProperties(),
           spec.getIoConfig().getPollTimeout(),
           spec.getIoConfig().getCheckpointPeriod(),
-          spec.getIoConfig().getLateMessageRejectionPeriod(),
-          spec.getIoConfig().getEarlyMessageRejectionPeriod(),
-          spec.getIoConfig().getLateMessageRejectionStartDateTime()
+          null, // useTransaction - use default
+          null, // minimumMessageTime - could be derived from lateMessageRejectionStartDateTime
+          null, // maximumMessageTime
+          spec.getIoConfig().getInputFormat(),
+          spec.getIoConfig().getConfigOverrides()
       );
 
       final KafkaShareGroupIndexTaskTuningConfig taskTuningConfig = spec.getTuningConfig().convertToTaskTuningConfig();
@@ -310,7 +310,6 @@ public class KafkaShareGroupSupervisor implements Supervisor
         }
       }
 
-      stateManager.maybeSetState(SupervisorStateManager.BasicState.STOPPED);
       log.info("KafkaShareGroupSupervisor [%s] stopped", spec.getId());
     }
   }
@@ -332,6 +331,12 @@ public class KafkaShareGroupSupervisor implements Supervisor
   }
 
   @Override
+  public SupervisorStateManager.State getState()
+  {
+    return stateManager.getSupervisorState();
+  }
+
+  @Override
   public Map<String, Map<String, Object>> getStats()
   {
     final Map<String, Object> stats = new HashMap<>();
@@ -345,7 +350,7 @@ public class KafkaShareGroupSupervisor implements Supervisor
   }
 
   @Override
-  public void reset(Map<String, Object> resetOptions)
+  public void reset(@Nullable DataSourceMetadata dataSourceMetadata)
   {
     log.info("Resetting supervisor [%s]", spec.getId());
 
@@ -379,19 +384,5 @@ public class KafkaShareGroupSupervisor implements Supervisor
   public Boolean isHealthy()
   {
     return stateManager.isHealthy();
-  }
-
-  @Override
-  public void checkpoint(int taskGroupId, Map<String, Object> checkpointMetadata)
-  {
-    log.info("Checkpoint requested for task group [%d] - not applicable for Share Groups", taskGroupId);
-    // Share Groups handle checkpointing automatically within tasks
-  }
-
-  @Override
-  public List<String> possiblyRegisterListener(Map<String, Object> checkpointMetadata)
-  {
-    // No listeners needed for Share Groups
-    return Collections.emptyList();
   }
 }

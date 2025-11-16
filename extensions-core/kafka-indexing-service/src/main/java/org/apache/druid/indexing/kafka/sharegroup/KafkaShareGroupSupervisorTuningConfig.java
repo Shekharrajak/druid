@@ -46,7 +46,28 @@ public class KafkaShareGroupSupervisorTuningConfig extends KafkaShareGroupIndexT
   public static KafkaShareGroupSupervisorTuningConfig defaultConfig()
   {
     return new KafkaShareGroupSupervisorTuningConfig(
-        null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
     );
   }
 

@@ -29,10 +29,8 @@ import java.util.List;
 /**
  * Status report for Kafka Share Group supervisor.
  */
-public class KafkaShareGroupSupervisorReport extends SupervisorReport
+public class KafkaShareGroupSupervisorReport extends SupervisorReport<KafkaShareGroupSupervisorReport.Payload>
 {
-  private final Payload payload;
-
   public KafkaShareGroupSupervisorReport(
       String supervisorId,
       DateTime generationTime,
@@ -45,23 +43,19 @@ public class KafkaShareGroupSupervisorReport extends SupervisorReport
       boolean suspended
   )
   {
-    super(supervisorId, generationTime);
-    this.payload = new Payload(
-        topic,
-        shareGroupId,
-        desiredReplicas,
-        activeTasks,
-        state,
-        recentErrors,
-        suspended
+    super(
+        supervisorId,
+        generationTime,
+        new Payload(
+            topic,
+            shareGroupId,
+            desiredReplicas,
+            activeTasks,
+            state,
+            recentErrors,
+            suspended
+        )
     );
-  }
-
-  @Override
-  @JsonProperty
-  public Object getPayload()
-  {
-    return payload;
   }
 
   public static class Payload

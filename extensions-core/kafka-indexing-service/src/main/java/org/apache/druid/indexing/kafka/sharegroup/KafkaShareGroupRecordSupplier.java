@@ -22,11 +22,9 @@ package org.apache.druid.indexing.kafka.sharegroup;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.kafka.clients.consumer.AcknowledgeType;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -218,7 +216,8 @@ public class KafkaShareGroupRecordSupplier
     for (ConsumerRecord<byte[], byte[]> record : toRelease) {
       try {
         acknowledge(record, AcknowledgeType.RELEASE);
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         log.error(e, "Failed to release record at timestamp [%d]", record.timestamp());
       }
     }
@@ -227,7 +226,8 @@ public class KafkaShareGroupRecordSupplier
       try {
         commitSync();
         log.info("Released %d pending acknowledgments", toRelease.size());
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         log.error(e, "Failed to commit release acknowledgments");
       }
     }

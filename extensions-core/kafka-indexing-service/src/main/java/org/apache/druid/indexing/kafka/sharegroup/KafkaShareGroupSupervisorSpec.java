@@ -31,6 +31,7 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -98,7 +99,7 @@ public class KafkaShareGroupSupervisorSpec implements SupervisorSpec
 
   private static String generateSupervisorId(String dataSource, String shareGroupId)
   {
-    return String.format("%s-%s-%s", TYPE, dataSource, shareGroupId);
+    return StringUtils.format("%s-%s-%s", TYPE, dataSource, shareGroupId);
   }
 
   @Override
@@ -153,7 +154,6 @@ public class KafkaShareGroupSupervisorSpec implements SupervisorSpec
     return ioConfig;
   }
 
-  @Override
   @JsonProperty
   @Nullable
   public Map<String, Object> getContext()

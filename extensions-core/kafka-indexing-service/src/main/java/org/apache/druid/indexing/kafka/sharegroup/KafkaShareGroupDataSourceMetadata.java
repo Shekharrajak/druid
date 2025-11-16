@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka.sharegroup;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -68,6 +69,20 @@ public class KafkaShareGroupDataSourceMetadata implements DataSourceMetadata
   }
 
   @Override
+  public boolean isValidStart()
+  {
+    return lastProcessedTimestamp == null;
+  }
+
+  @Override
+  public DataSourceMetadata asStartMetadata()
+  {
+    // For Share Groups, there's no distinction between start and end metadata
+    // as we don't track offsets. Simply return this instance.
+    return this;
+  }
+
+  @Override
   public boolean matches(DataSourceMetadata other)
   {
     if (!(other instanceof KafkaShareGroupDataSourceMetadata)) {
@@ -84,7 +99,7 @@ public class KafkaShareGroupDataSourceMetadata implements DataSourceMetadata
   {
     if (!(other instanceof KafkaShareGroupDataSourceMetadata)) {
       throw new IllegalArgumentException(
-          String.format("Expected KafkaShareGroupDataSourceMetadata, got [%s]", other.getClass().getSimpleName())
+          StringUtils.format("Expected KafkaShareGroupDataSourceMetadata, got [%s]", other.getClass().getSimpleName())
       );
     }
 
@@ -92,7 +107,7 @@ public class KafkaShareGroupDataSourceMetadata implements DataSourceMetadata
 
     if (!matches(that)) {
       throw new IllegalArgumentException(
-          String.format("Cannot merge metadata from different sources: [%s] vs [%s]", this, that)
+          StringUtils.format("Cannot merge metadata from different sources: [%s] vs [%s]", this, that)
       );
     }
 

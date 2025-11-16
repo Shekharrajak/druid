@@ -33,8 +33,6 @@ import org.apache.kafka.common.TopicPartition;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -227,10 +225,28 @@ public class KafkaShareGroupRecordSupplierTest
   public void testReleaseAll()
   {
     ConsumerRecord<byte[], byte[]> record1 = new ConsumerRecord<>(
-        TOPIC, 0, 0, 1000L, null, null, 0, 0, null, StringUtils.toUtf8("test1")
+        TOPIC,
+        0,
+        0,
+        1000L,
+        null,
+        null,
+        0,
+        0,
+        null,
+        StringUtils.toUtf8("test1")
     );
     ConsumerRecord<byte[], byte[]> record2 = new ConsumerRecord<>(
-        TOPIC, 0, 1, 2000L, null, null, 0, 0, null, StringUtils.toUtf8("test2")
+        TOPIC,
+        0,
+        1,
+        2000L,
+        null,
+        null,
+        0,
+        0,
+        null,
+        StringUtils.toUtf8("test2")
     );
 
     Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> recordsMap = ImmutableMap.of(
@@ -269,7 +285,16 @@ public class KafkaShareGroupRecordSupplierTest
   public void testCloseWithPendingAcknowledgments()
   {
     ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(
-        TOPIC, 0, 0, 1000L, null, null, 0, 0, null, StringUtils.toUtf8("test")
+        TOPIC,
+        0,
+        0,
+        1000L,
+        null,
+        null,
+        0,
+        0,
+        null,
+        StringUtils.toUtf8("test")
     );
 
     Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> recordsMap = ImmutableMap.of(
@@ -307,7 +332,16 @@ public class KafkaShareGroupRecordSupplierTest
   public void testGetOldestPendingAcknowledgmentAge() throws InterruptedException
   {
     ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(
-        TOPIC, 0, 0, 1000L, null, null, 0, 0, null, StringUtils.toUtf8("test")
+        TOPIC,
+        0,
+        0,
+        1000L,
+        null,
+        null,
+        0,
+        0,
+        null,
+        StringUtils.toUtf8("test")
     );
 
     Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> recordsMap = ImmutableMap.of(
@@ -343,7 +377,16 @@ public class KafkaShareGroupRecordSupplierTest
   public void testAcknowledgeAfterClose()
   {
     ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(
-        TOPIC, 0, 0, 1000L, null, null, 0, 0, null, StringUtils.toUtf8("test")
+        TOPIC,
+        0,
+        0,
+        1000L,
+        null,
+        null,
+        0,
+        0,
+        null,
+        StringUtils.toUtf8("test")
     );
 
     when(mockConsumer.commitSync())
