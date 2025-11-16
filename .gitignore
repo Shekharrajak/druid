@@ -51,3 +51,7 @@ nbactions.xml
 nb-configuration.xml
 *.iq.out
 *.iq@*.out
+
+# Local storage folder (can be in any directory)
+**/local_storage_folder/
+local_storage_folder/
