@@ -109,14 +109,18 @@ public class KafkaShareGroupSupervisorTuningConfig extends KafkaShareGroupIndexT
         maxPendingPersists,
         indexSpec,
         indexSpecForIntermediatePersists,
+        null, // reportParseExceptions - deprecated, use null
+        handoffConditionTimeout,
+        null, // resetOffsetAutomatically - not applicable for share groups
+        null, // skipSequenceNumberAvailabilityCheck - not applicable for share groups
+        segmentWriteOutMediumFactory,
+        intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
         maxSavedParseExceptions,
-        handoffConditionTimeout,
-        segmentWriteOutMediumFactory,
-        intermediateHandoffPeriod,
         numPersistThreads,
-        maxColumnsToMerge
+        maxColumnsToMerge,
+        null  // releaseLocksOnHandoff - use default
     );
 
     this.workerThreads = workerThreads;
@@ -164,14 +168,18 @@ public class KafkaShareGroupSupervisorTuningConfig extends KafkaShareGroupIndexT
         getMaxPendingPersists(),
         getIndexSpec(),
         getIndexSpecForIntermediatePersists(),
+        null, // reportParseExceptions - deprecated
+        getHandoffConditionTimeout(),
+        null, // resetOffsetAutomatically - not applicable for share groups
+        null, // skipSequenceNumberAvailabilityCheck - not applicable for share groups
+        getSegmentWriteOutMediumFactory(),
+        getIntermediateHandoffPeriod(),
         isLogParseExceptions(),
         getMaxParseExceptions(),
         getMaxSavedParseExceptions(),
-        getHandoffConditionTimeout(),
-        getSegmentWriteOutMediumFactory(),
-        getIntermediateHandoffPeriod(),
         getNumPersistThreads(),
-        getMaxColumnsToMerge()
+        getMaxColumnsToMerge(),
+        null  // releaseLocksOnHandoff - use default
     );
   }
 

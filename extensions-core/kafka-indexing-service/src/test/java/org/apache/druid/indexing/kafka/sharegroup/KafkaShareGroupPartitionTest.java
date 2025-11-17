@@ -27,38 +27,37 @@ public class KafkaShareGroupPartitionTest
   @Test
   public void testSyntheticPartition()
   {
-    final KafkaShareGroupPartition partition1 = new KafkaShareGroupPartition("topic1", "group1");
-    final KafkaShareGroupPartition partition2 = new KafkaShareGroupPartition("topic1", "group1");
-    final KafkaShareGroupPartition different = new KafkaShareGroupPartition("topic2", "group1");
+    final KafkaShareGroupPartition partition1 = new KafkaShareGroupPartition("topic1");
+    final KafkaShareGroupPartition partition2 = new KafkaShareGroupPartition("topic1");
+    final KafkaShareGroupPartition different = new KafkaShareGroupPartition("topic2");
 
-    // All partitions are equal (synthetic partition concept)
+    // All partitions are equal (synthetic partition concept - single queue)
     Assert.assertEquals(partition1, partition2);
     Assert.assertEquals(partition1.hashCode(), partition2.hashCode());
+    Assert.assertEquals(partition1, different); // All partitions are equal regardless of topic
 
-    // But they maintain topic/group identity
-    Assert.assertEquals("topic1", partition1.getTopic());
-    Assert.assertEquals("group1", partition1.getShareGroupId());
-
-    Assert.assertEquals("topic2", different.getTopic());
+    // But they maintain topic identity
+    Assert.assertEquals("topic1", partition1.topic());
+    Assert.assertEquals("topic2", different.topic());
   }
 
   @Test
   public void testGetPartitionId()
   {
-    final KafkaShareGroupPartition partition = new KafkaShareGroupPartition("topic", "group");
+    final KafkaShareGroupPartition partition = new KafkaShareGroupPartition("topic");
 
     // Always returns synthetic partition 0
-    Assert.assertEquals(KafkaShareGroupPartition.SYNTHETIC_PARTITION_ID, partition.getPartitionId());
-    Assert.assertEquals(0, partition.getPartitionId());
+    Assert.assertEquals(KafkaShareGroupPartition.SYNTHETIC_PARTITION_ID, partition.partition());
+    Assert.assertEquals(0, partition.partition());
   }
 
   @Test
   public void testToString()
   {
-    final KafkaShareGroupPartition partition = new KafkaShareGroupPartition("test-topic", "test-group");
+    final KafkaShareGroupPartition partition = new KafkaShareGroupPartition("test-topic");
     final String str = partition.toString();
 
     Assert.assertTrue(str.contains("test-topic"));
-    Assert.assertTrue(str.contains("test-group"));
+    Assert.assertTrue(str.contains("synthetic"));
   }
 }

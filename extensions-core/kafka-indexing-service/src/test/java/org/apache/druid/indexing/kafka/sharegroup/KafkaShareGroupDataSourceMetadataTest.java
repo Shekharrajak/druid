@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka.sharegroup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -35,7 +36,7 @@ public class KafkaShareGroupDataSourceMetadataTest
     final KafkaShareGroupDataSourceMetadata metadata = new KafkaShareGroupDataSourceMetadata(
         "test-topic",
         "test-group",
-        DateTime.parse("2024-01-01T00:00:00Z")
+        DateTimes.of("2024-01-01T00:00:00Z")
     );
 
     final String json = mapper.writeValueAsString(metadata);
@@ -52,8 +53,8 @@ public class KafkaShareGroupDataSourceMetadataTest
   @Test
   public void testPlus()
   {
-    final DateTime time1 = DateTime.parse("2024-01-01T00:00:00Z");
-    final DateTime time2 = DateTime.parse("2024-01-02T00:00:00Z");
+    final DateTime time1 = DateTimes.of("2024-01-01T00:00:00Z");
+    final DateTime time2 = DateTimes.of("2024-01-02T00:00:00Z");
 
     final KafkaShareGroupDataSourceMetadata metadata1 = new KafkaShareGroupDataSourceMetadata(
         "test-topic",
@@ -79,19 +80,19 @@ public class KafkaShareGroupDataSourceMetadataTest
     final KafkaShareGroupDataSourceMetadata metadata1 = new KafkaShareGroupDataSourceMetadata(
         "test-topic",
         "test-group",
-        DateTime.parse("2024-01-01T00:00:00Z")
+        DateTimes.of("2024-01-01T00:00:00Z")
     );
 
     final KafkaShareGroupDataSourceMetadata metadata2 = new KafkaShareGroupDataSourceMetadata(
         "test-topic",
         "test-group",
-        DateTime.parse("2024-01-02T00:00:00Z")
+        DateTimes.of("2024-01-02T00:00:00Z")
     );
 
     final KafkaShareGroupDataSourceMetadata differentTopic = new KafkaShareGroupDataSourceMetadata(
         "other-topic",
         "test-group",
-        DateTime.parse("2024-01-01T00:00:00Z")
+        DateTimes.of("2024-01-01T00:00:00Z")
     );
 
     Assert.assertTrue(metadata1.matches(metadata2));

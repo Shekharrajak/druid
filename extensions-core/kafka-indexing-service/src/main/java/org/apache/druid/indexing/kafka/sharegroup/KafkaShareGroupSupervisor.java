@@ -110,7 +110,7 @@ public class KafkaShareGroupSupervisor implements Supervisor
       stateManager.maybeSetState(SupervisorStateManager.BasicState.PENDING);
       started = true;
 
-      // TODO: Schedule periodic task management
+      // Schedule periodic task management to monitor and spawn tasks
       exec.scheduleAtFixedRate(
           this::runInternal,
           0,

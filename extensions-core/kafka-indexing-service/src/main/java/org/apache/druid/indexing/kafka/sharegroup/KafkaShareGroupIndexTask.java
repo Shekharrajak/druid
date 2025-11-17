@@ -24,31 +24,49 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.InputEntityReader;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.appenderator.ActionBasedPublishedSegmentRetriever;
+import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.LockReleaseAction;
+import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.input.InputRowSchemas;
+import org.apache.druid.indexing.seekablestream.SeekableStreamAppenderatorConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
+import org.apache.druid.segment.realtime.appenderator.Appenderator;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
+import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.kafka.clients.consumer.AcknowledgeType;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -69,6 +87,8 @@ public class KafkaShareGroupIndexTask extends AbstractTask
 
   private volatile boolean stopped = false;
   private KafkaShareGroupRecordSupplier recordSupplier;
+  private StreamAppenderatorDriver driver;
+  private InputFormat inputFormat;
 
   @JsonCreator
   public KafkaShareGroupIndexTask(
@@ -170,6 +190,9 @@ public class KafkaShareGroupIndexTask extends AbstractTask
 
   private TaskStatus runInternal(TaskToolbox toolbox) throws Exception
   {
+    log.info("Initializing Share Group ingestion for topic [%s], share group [%s]",
+             ioConfig.getTopic(), ioConfig.getShareGroupId());
+
     final RowIngestionMeters rowIngestionMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
     final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
         rowIngestionMeters,
@@ -178,68 +201,245 @@ public class KafkaShareGroupIndexTask extends AbstractTask
         tuningConfig.getMaxSavedParseExceptions()
     );
 
+    // Initialize InputFormat
+    this.inputFormat = ioConfig.getInputFormat();
+    if (inputFormat == null) {
+      throw new IllegalStateException("InputFormat is required for Share Group ingestion");
+    }
+
+    final SegmentGenerationMetrics metrics = new SegmentGenerationMetrics();
+
+    // Create Appenderator for segment building
+    final Appenderator appenderator = toolbox.getAppenderatorsManager().createRealtimeAppenderatorForTask(
+        toolbox.getSegmentLoaderConfig(),
+        getId(),
+        dataSchema,
+        SeekableStreamAppenderatorConfig.fromTuningConfig(
+            tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
+            toolbox.getProcessingConfig()
+        ),
+        toolbox.getConfig(),
+        metrics,
+        toolbox.getSegmentPusher(),
+        toolbox.getJsonMapper(),
+        toolbox.getIndexIO(),
+        toolbox.getIndexMerger(),
+        toolbox.getQueryRunnerFactoryConglomerate(),
+        toolbox.getSegmentAnnouncer(),
+        toolbox.getEmitter(),
+        toolbox.getQueryProcessingPool(),
+        toolbox.getJoinableFactory(),
+        toolbox.getCache(),
+        toolbox.getCacheConfig(),
+        toolbox.getCachePopulatorStats(),
+        toolbox.getPolicyEnforcer(),
+        rowIngestionMeters,
+        parseExceptionHandler,
+        toolbox.getCentralizedTableSchemaConfig(),
+        interval -> {
+          toolbox.getTaskActionClient().submit(new LockReleaseAction(interval));
+        }
+    );
+
+    // Create driver for managing appenderator lifecycle
+    this.driver = new StreamAppenderatorDriver(
+        appenderator,
+        new ActionBasedSegmentAllocator(
+            toolbox.getTaskActionClient(),
+            dataSchema,
+            (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> new SegmentAllocateAction(
+                schema.getDataSource(),
+                row.getTimestamp(),
+                schema.getGranularitySpec().getQueryGranularity(),
+                schema.getGranularitySpec().getSegmentGranularity(),
+                sequenceName,
+                previousSegmentId,
+                skipSegmentLineageCheck,
+                NumberedPartialShardSpec.instance(),
+                null,  // lockGranularity - use default
+                null   // lockType - use default
+            )
+        ),
+        toolbox.getSegmentHandoffNotifierFactory(),
+        new ActionBasedPublishedSegmentRetriever(toolbox.getTaskActionClient()),
+        toolbox.getDataSegmentKiller(),
+        toolbox.getJsonMapper(),
+        metrics
+    );
+
+    driver.startJob(null);
+
+    try {
+      return runIngestionLoop(toolbox, rowIngestionMeters, parseExceptionHandler);
+    }
+    finally {
+      closeResources();
+    }
+  }
+
+  private TaskStatus runIngestionLoop(
+      TaskToolbox toolbox,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
+  ) throws Exception
+  {
     long nextCheckpoint = System.currentTimeMillis() + ioConfig.getCheckpointPeriod().toStandardDuration().getMillis();
+    long nextPublish = System.currentTimeMillis() + tuningConfig.getIntermediateHandoffPeriod().toStandardDuration().getMillis();
     long recordsProcessed = 0;
 
-    // TODO: Integrate with full segment publishing pipeline
-    // For now, this demonstrates the core Share Group consumption logic
+    final Map<ConsumerRecord<byte[], byte[]>, InputRow> recordToRowMap = new HashMap<>();
 
     while (!stopped) {
       List<OrderedPartitionableRecord<KafkaShareGroupPartition, Long, KafkaRecordEntity>> records =
           recordSupplier.poll(ioConfig.getPollTimeout());
 
       if (records.isEmpty()) {
+        // Check if we need to checkpoint or publish
         if (System.currentTimeMillis() >= nextCheckpoint) {
           log.info("Checkpointing at empty poll");
+          driver.persist(null);
           recordSupplier.commitSync();
           nextCheckpoint = System.currentTimeMillis() + ioConfig.getCheckpointPeriod().toStandardDuration().getMillis();
+        }
+
+        if (System.currentTimeMillis() >= nextPublish) {
+          log.info("Publishing segments");
+          publishSegments(toolbox);
+          nextPublish = System.currentTimeMillis() + tuningConfig.getIntermediateHandoffPeriod().toStandardDuration().getMillis();
         }
         continue;
       }
 
-      // Process each record
+      // Process batch of records
       final List<ConsumerRecord<byte[], byte[]>> successfulRecords = new ArrayList<>();
       final List<ConsumerRecord<byte[], byte[]>> rejectedRecords = new ArrayList<>();
 
       for (OrderedPartitionableRecord<KafkaShareGroupPartition, Long, KafkaRecordEntity> record : records) {
         try {
-          // TODO: Parse and index record
-          // For now, just track successful processing
-          recordsProcessed++;
-          successfulRecords.add(((KafkaRecordEntity) record.getData().get(0)).getRecord());
+          // Parse record into InputRow
+          final KafkaRecordEntity entity = (KafkaRecordEntity) record.getData().get(0);
+          final ConsumerRecord<byte[], byte[]> consumerRecord = entity.getRecord();
+
+          final InputRow inputRow = parseRecord(entity, parseExceptionHandler);
+
+          if (inputRow != null) {
+            // Add to appenderator
+            final AppenderatorDriverAddResult addResult = driver.add(
+                inputRow,
+                getId(),
+                null,
+                false,
+                true
+            );
+
+            if (addResult.isOk()) {
+              recordsProcessed++;
+              recordToRowMap.put(consumerRecord, inputRow);
+              successfulRecords.add(consumerRecord);
+              rowIngestionMeters.incrementProcessed();
+            } else {
+              log.warn("Failed to add row to appenderator");
+              rejectedRecords.add(consumerRecord);
+              rowIngestionMeters.incrementProcessedWithError();
+            }
+          } else {
+            // Parsing returned null (filtered out or invalid)
+            rejectedRecords.add(consumerRecord);
+          }
         }
         catch (ParseException pe) {
           log.warn(pe, "Failed to parse record, rejecting");
           parseExceptionHandler.handle(pe);
           rejectedRecords.add(((KafkaRecordEntity) record.getData().get(0)).getRecord());
+          rowIngestionMeters.incrementUnparseable();
         }
         catch (Exception e) {
           log.error(e, "Error processing record, releasing for retry");
-          recordSupplier.acknowledge(((KafkaRecordEntity) record.getData().get(0)).getRecord(), AcknowledgeType.RELEASE);
+          recordSupplier.acknowledge(
+              ((KafkaRecordEntity) record.getData().get(0)).getRecord(),
+              AcknowledgeType.RELEASE
+          );
           throw e;
         }
       }
 
       // Acknowledge successfully processed records
-      for (ConsumerRecord<byte[], byte[]> record : successfulRecords) {
-        recordSupplier.acknowledge(record, AcknowledgeType.ACCEPT);
+      for (ConsumerRecord<byte[], byte[]> consumerRecord : successfulRecords) {
+        recordSupplier.acknowledge(consumerRecord, AcknowledgeType.ACCEPT);
       }
 
       // Reject permanently failed records
-      for (ConsumerRecord<byte[], byte[]> record : rejectedRecords) {
-        recordSupplier.acknowledge(record, AcknowledgeType.REJECT);
+      for (ConsumerRecord<byte[], byte[]> consumerRecord : rejectedRecords) {
+        recordSupplier.acknowledge(consumerRecord, AcknowledgeType.REJECT);
       }
 
-      // Checkpoint if needed
+      // Periodic checkpoint
       if (System.currentTimeMillis() >= nextCheckpoint) {
         log.info("Checkpointing after processing [%d] records (total: [%d])", records.size(), recordsProcessed);
+        driver.persist(null);
         recordSupplier.commitSync();
+        recordToRowMap.clear();
         nextCheckpoint = System.currentTimeMillis() + ioConfig.getCheckpointPeriod().toStandardDuration().getMillis();
+      }
+
+      // Periodic segment publish
+      if (System.currentTimeMillis() >= nextPublish) {
+        log.info("Publishing segments, records processed: [%d]", recordsProcessed);
+        publishSegments(toolbox);
+        recordToRowMap.clear();
+        nextPublish = System.currentTimeMillis() + tuningConfig.getIntermediateHandoffPeriod().toStandardDuration().getMillis();
       }
     }
 
+    // Final publish before shutdown
     log.info("Task stopped gracefully after processing [%d] records", recordsProcessed);
+    publishSegments(toolbox);
+
     return TaskStatus.success(getId());
+  }
+
+  private InputRow parseRecord(KafkaRecordEntity entity, ParseExceptionHandler parseExceptionHandler)
+  {
+    try {
+      final InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(dataSchema);
+
+      // Parse using InputFormat
+      final InputEntityReader reader = inputFormat.createReader(
+          inputRowSchema,
+          entity,
+          null  // temporaryDirectory
+      );
+
+      try (CloseableIterator<InputRow> iterator = reader.read()) {
+        if (iterator.hasNext()) {
+          return iterator.next();
+        }
+        return null;
+      }
+    }
+    catch (IOException e) {
+      throw new ParseException(null, e, "Failed to parse Kafka record");
+    }
+  }
+
+  private void publishSegments(TaskToolbox toolbox) throws Exception
+  {
+    // Simplified publishing - just persist for now
+    // Full publishing with handoff will be implemented in follow-up
+    driver.persist(null);
+    log.info("Persisted segments");
+  }
+
+  private void closeResources()
+  {
+    try {
+      if (driver != null) {
+        driver.close();
+      }
+    }
+    catch (Exception e) {
+      log.warn(e, "Failed to close driver");
+    }
   }
 
   @Override
