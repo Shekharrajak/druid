@@ -31,10 +31,6 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Map;
 
-/**
- * Unit tests for {@link ShareGroupIndexTask} focusing on task type,
- * serialization/deserialization, and basic properties.
- */
 public class ShareGroupIndexTaskTest
 {
   private ObjectMapper mapper;
@@ -48,7 +44,6 @@ public class ShareGroupIndexTaskTest
         new NamedType(ShareGroupIndexTaskIOConfig.class, "kafka_share_group"),
         new NamedType(KafkaIndexTaskTuningConfig.class, "KafkaTuningConfig")
     );
-    // Inject the ObjectMapper itself since ShareGroupIndexTask uses @JacksonInject
     mapper.setInjectableValues(new com.fasterxml.jackson.databind.InjectableValues.Std()
         .addValue(ObjectMapper.class, mapper));
   }
@@ -105,8 +100,6 @@ public class ShareGroupIndexTaskTest
   {
     final ShareGroupIndexTask task = createTask("task_serde");
     final String json = mapper.writeValueAsString(task);
-
-    // Verify the type field is present
     Assert.assertTrue(json.contains("index_kafka_share_group"));
 
     final ShareGroupIndexTask deserialized = mapper.readValue(json, ShareGroupIndexTask.class);
@@ -143,9 +136,11 @@ public class ShareGroupIndexTaskTest
         null
     );
 
+    // Use all-nulls constructor (22 params)
     final KafkaIndexTaskTuningConfig tuningConfig = new KafkaIndexTaskTuningConfig(
         null, null, null, null, null, null, null, null, null, null,
-        null, null, null, null, null, null, null, null, null, null
+        null, null, null, null, null, null, null, null, null, null,
+        null, null
     );
 
     return new ShareGroupIndexTask(

@@ -23,15 +23,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
 import org.apache.druid.indexing.kafka.ShareGroupIndexTask;
 import org.apache.druid.indexing.kafka.ShareGroupIndexTaskIOConfig;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -52,16 +54,13 @@ import java.util.concurrent.ThreadLocalRandom;
  * End-to-end integration test for Kafka share group ingestion.
  *
  * Demonstrates the full workflow:
- * <ol>
- *   <li>Start an embedded Druid cluster with Kafka extension</li>
- *   <li>Create a Kafka topic and produce CSV records</li>
- *   <li>Submit a {@link ShareGroupIndexTask} via the Overlord API</li>
- *   <li>Wait for records to be ingested</li>
- *   <li>Verify data via SQL query</li>
- * </ol>
+ * 1. Start an embedded Druid cluster with Kafka extension
+ * 2. Create a Kafka topic and produce CSV records
+ * 3. Submit a ShareGroupIndexTask via the Overlord API
+ * 4. Wait for records to be ingested
+ * 5. Verify data via SQL query
  *
- * This test requires a Kafka 4.0+ broker with share group support.
- * The KafkaResource Testcontainer uses apache/kafka:4.1.1 by default.
+ * Requires Docker for Testcontainers Kafka broker.
  */
 public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
 {
@@ -112,14 +111,13 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
         generateRecords(topic, numRecords, DateTimes.of("2025-06-01"))
     );
 
-    // Build the task spec
     final DataSchema dataSchema = DataSchema.builder()
         .withDataSource(dataSource)
         .withTimestamp(new TimestampSpec(COL_TIMESTAMP, null, null))
         .withDimensions(DimensionsSpec.EMPTY)
         .withGranularity(new UniformGranularitySpec(
-            org.apache.druid.java.util.common.granularity.Granularities.DAY,
-            org.apache.druid.java.util.common.granularity.Granularities.NONE,
+            Granularities.DAY,
+            Granularities.NONE,
             null
         ))
         .build();
@@ -134,10 +132,11 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
 
     final KafkaIndexTaskTuningConfig tuningConfig = new KafkaIndexTaskTuningConfig(
         null, null, null, null, null, null, null, null, null, null,
-        null, null, null, null, null, null, null, null, null, null
+        null, null, null, null, null, null, null, null, null, null,
+        null, null
     );
 
-    final ObjectMapper mapper = cluster.callApi().objectMapper();
+    final ObjectMapper mapper = new DefaultObjectMapper();
     final ShareGroupIndexTask task = new ShareGroupIndexTask(
         null,
         null,
@@ -148,20 +147,14 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
         mapper
     );
 
-    // Submit the task
     cluster.callApi().submitTask(task);
 
-    // Wait for records to be processed
     indexer.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("ingest/events/processed")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(numRecords)
     );
 
-    // Gracefully stop the task so it publishes and exits
-    // (In production, a supervisor would manage this lifecycle)
-
-    // Verify ingested row count via SQL
     Assertions.assertEquals(
         String.valueOf(numRecords),
         cluster.runSql("SELECT COUNT(*) FROM %s", dataSource)
