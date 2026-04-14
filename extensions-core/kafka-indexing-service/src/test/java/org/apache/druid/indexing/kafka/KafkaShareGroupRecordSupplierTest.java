@@ -128,7 +128,7 @@ public class KafkaShareGroupRecordSupplierTest
   @Test
   public void testAcknowledgeDefaultAccept()
   {
-    final KafkaTopicPartition partition = new KafkaTopicPartition(false, "test-topic", 0);
+    final KafkaTopicPartition partition = new KafkaTopicPartition(true, "test-topic", 0);
     supplier.acknowledge(partition, 42L);
 
     Mockito.verify(mockConsumer).acknowledge(
@@ -140,7 +140,7 @@ public class KafkaShareGroupRecordSupplierTest
   @Test
   public void testAcknowledgeWithRelease()
   {
-    final KafkaTopicPartition partition = new KafkaTopicPartition(false, "test-topic", 0);
+    final KafkaTopicPartition partition = new KafkaTopicPartition(true, "test-topic", 0);
     supplier.acknowledge(partition, 10L, AcknowledgeType.RELEASE);
 
     Mockito.verify(mockConsumer).acknowledge(
@@ -152,7 +152,7 @@ public class KafkaShareGroupRecordSupplierTest
   @Test
   public void testAcknowledgeWithReject()
   {
-    final KafkaTopicPartition partition = new KafkaTopicPartition(false, "test-topic", 0);
+    final KafkaTopicPartition partition = new KafkaTopicPartition(true, "test-topic", 0);
     supplier.acknowledge(partition, 10L, AcknowledgeType.REJECT);
 
     Mockito.verify(mockConsumer).acknowledge(
@@ -164,8 +164,8 @@ public class KafkaShareGroupRecordSupplierTest
   @Test
   public void testAcknowledgeBatch()
   {
-    final KafkaTopicPartition p0 = new KafkaTopicPartition(false, "test-topic", 0);
-    final KafkaTopicPartition p1 = new KafkaTopicPartition(false, "test-topic", 1);
+    final KafkaTopicPartition p0 = new KafkaTopicPartition(true, "test-topic", 0);
+    final KafkaTopicPartition p1 = new KafkaTopicPartition(true, "test-topic", 1);
 
     final Map<KafkaTopicPartition, java.util.Collection<Long>> offsets = new HashMap<>();
     offsets.put(p0, Arrays.asList(1L, 2L, 3L));
