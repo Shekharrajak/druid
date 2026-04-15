@@ -30,8 +30,6 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
-import org.apache.kafka.common.record.TimestampType;
-import java.util.Optional;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -104,8 +102,8 @@ public class KafkaStringHeaderFormatTest
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
     inputEntity = new KafkaRecordEntity(new ConsumerRecord<>(
         "sample", 0, 0, timestamp,
-        TimestampType.CREATE_TIME, 0, 0,
-        null, "sampleValue".getBytes(StandardCharsets.UTF_8), headers, Optional.empty()
+        null, null, 0, 0,
+        null, "sampleValue".getBytes(StandardCharsets.UTF_8), headers
     ));
     List<Pair<String, Object>> expectedResults = Arrays.asList(
         Pair.of("test.kafka.header.encoding", "application/json"),
@@ -155,8 +153,8 @@ public class KafkaStringHeaderFormatTest
     Headers headers = new RecordHeaders(header);
     inputEntity = new KafkaRecordEntity(new ConsumerRecord<>(
         "sample", 0, 0, timestamp,
-        TimestampType.CREATE_TIME, 0, 0,
-        null, "sampleValue".getBytes(StandardCharsets.UTF_8), headers, Optional.empty()
+        null, null, 0, 0,
+        null, "sampleValue".getBytes(StandardCharsets.UTF_8), headers
     ));
     List<Pair<String, Object>> expectedResults = Arrays.asList(
         Pair.of("test.kafka.header.encoding", "application/json"),
@@ -207,8 +205,8 @@ public class KafkaStringHeaderFormatTest
     Headers headers = new RecordHeaders(header);
     inputEntity = new KafkaRecordEntity(new ConsumerRecord<>(
         "sample", 0, 0, timestamp,
-        TimestampType.CREATE_TIME, 0, 0,
-        null, "sampleValue".getBytes(StandardCharsets.UTF_8), headers, Optional.empty()
+        null, null, 0, 0,
+        null, "sampleValue".getBytes(StandardCharsets.UTF_8), headers
     ));
     List<Pair<String, Object>> expectedResults = Arrays.asList(
         Pair.of("test.kafka.header.encoding", "?pplic?tion/json"),

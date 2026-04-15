@@ -181,7 +181,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
               if (executorService.isShutdown()) {
                 break;
               }
-              final ConsumerRecords<String, String> records = consumer.poll(java.time.Duration.ofMillis(1000));
+              final ConsumerRecords<String, String> records = consumer.poll(1000);
               startingReads.countDown();
 
               for (final ConsumerRecord<String, String> record : records) {
