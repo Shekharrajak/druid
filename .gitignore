@@ -51,3 +51,6 @@ nbactions.xml
 nb-configuration.xml
 *.iq.out
 *.iq@*.out
+
+# Benchmark harness archives raw JMH JSON locally; only commit the result.txt summary.
+benchmarks/results/*.json
