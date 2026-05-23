@@ -203,7 +203,7 @@ public final class BenchmarkReporter
     String bestParams = null;
     double bestSpeedup = 0;
     String worstParams = null;
-    double worstSpeedup = Double.MAX_VALUE;
+    double worstSpeedup = Double.POSITIVE_INFINITY;
 
     for (final Map.Entry<String, Map<String, Row>> e : grouped.entrySet()) {
       final Map<String, Row> byScenario = e.getValue();
