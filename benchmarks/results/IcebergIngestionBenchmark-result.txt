@@ -1,0 +1,15 @@
+================================================================================
+IcebergIngestionBenchmark
+Generated: 2026-05-23T11:57:35.601232Z
+JMH: avg time per op (ms)
+Throughput unit: rows/s
+Baseline: icebergInputSourceReader_ingest
+================================================================================
+
+| numColumns | numRows    | icebergArrowInputSourceReader_ingest (ms / throughput) | icebergInputSourceReader_ingest (ms / throughput) | Speedup  |
+|------------|------------|----------------------------------------------|----------------------------------------------|----------|
+| 5          | 100000     |   346.89 ms  288,279 rows/s                  |   407.29 ms  245,524 rows/s                  | 1.17x    |
+================================================================================
+Summary:  best 1.17x ({numColumns=5, numRows=100000}) | worst 1.17x ({numColumns=5, numRows=100000}) | geomean 1.17x
+================================================================================
+
