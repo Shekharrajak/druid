@@ -24,8 +24,8 @@ import org.apache.druid.benchmark.harness.BenchmarkRunner;
 import org.apache.druid.benchmark.harness.BenchmarkSubject;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
@@ -37,6 +37,7 @@ import org.apache.druid.data.input.parquet.ParquetInputFormat;
 import org.apache.druid.iceberg.input.IcebergArrowInputSourceReader;
 import org.apache.druid.iceberg.input.IcebergInputSource;
 import org.apache.druid.iceberg.input.LocalCatalog;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.DataFile;
@@ -69,11 +70,9 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -116,7 +115,7 @@ public class IcebergReaderBenchmark
   @Setup(Level.Trial)
   public void setup() throws IOException
   {
-    warehouseDir = Files.createTempDirectory("iceberg-bench-").toFile();
+    warehouseDir = FileUtils.createTempDir();
     catalog = new LocalCatalog(warehouseDir.getAbsolutePath(), new HashMap<>(), true);
 
     final Schema schema = buildSchema(numColumns);
