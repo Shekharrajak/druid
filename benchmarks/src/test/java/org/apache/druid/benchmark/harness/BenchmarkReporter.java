@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 /**
@@ -84,25 +85,25 @@ public final class BenchmarkReporter
    *
    * @param benchmarkClass    the JMH benchmark class to run
    * @param baselineScenario  scenario name to use as the speedup baseline; null = auto-pick slowest
-   * @param unitsPerOpForRows expected units produced per op, keyed by @Benchmark method name.
-   *                          If a scenario isn't in the map, throughput shows "n/a".
+   * @param unitsPerOp        function returning units/op for a (scenario name, JMH params) tuple.
+   *                          Returning null suppresses the throughput cell for that row.
    */
   public static void runAndReport(
       final Class<?> benchmarkClass,
       @Nullable final String baselineScenario,
-      final Map<String, Long> unitsPerOpForRows
+      final BiFunction<String, Map<String, String>, Long> unitsPerOp
   ) throws Exception
   {
-    runAndReport(benchmarkClass, baselineScenario, unitsPerOpForRows, b -> { /* defaults */ });
+    runAndReport(benchmarkClass, baselineScenario, unitsPerOp, b -> { /* defaults */ });
   }
 
   /**
-   * Same as {@link #runAndReport(Class, String, Map)} but with a hook to customize JMH options.
+   * Same as {@link #runAndReport(Class, String, BiFunction)} but with a hook to customize JMH options.
    */
   public static void runAndReport(
       final Class<?> benchmarkClass,
       @Nullable final String baselineScenario,
-      final Map<String, Long> unitsPerOpForRows,
+      final BiFunction<String, Map<String, String>, Long> unitsPerOp,
       final Consumer<OptionsBuilder> jmhOptionsCustomizer
   ) throws Exception
   {
@@ -120,7 +121,7 @@ public final class BenchmarkReporter
 
     new Runner(opts.build()).run();
 
-    final String report = buildReport(jsonPath, className, baselineScenario, unitsPerOpForRows);
+    final String report = buildReport(jsonPath, className, baselineScenario, unitsPerOp);
     try (PrintWriter pw = new PrintWriter(Files.newBufferedWriter(txtPath, StandardCharsets.UTF_8))) {
       pw.println(report);
     }
@@ -132,7 +133,7 @@ public final class BenchmarkReporter
       final Path jsonPath,
       final String benchmarkName,
       @Nullable final String baselineScenario,
-      final Map<String, Long> unitsPerOpForRows
+      final BiFunction<String, Map<String, String>, Long> unitsPerOp
   ) throws IOException
   {
     final List<Row> rows = parseJson(jsonPath);
@@ -217,7 +218,7 @@ public final class BenchmarkReporter
         if (r == null) {
           out.append(pad("n/a", 44)).append(" | ");
         } else {
-          final Long units = unitsPerOpForRows.get(s);
+          final Long units = unitsPerOp.apply(s, r.params);
           final String throughput = units != null
                                     ? String.format(Locale.ROOT, "%,.0f %s", units / (r.scoreMs / 1000.0), UNIT_LABEL)
                                     : "n/a";

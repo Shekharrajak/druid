@@ -210,16 +210,11 @@ public class IcebergReaderBenchmark
 
   public static void main(final String[] args) throws Exception
   {
-    // The reporter needs to know units/op out-of-band (JMH only exposes the avg score).
-    // For this benchmark, both scenarios produce exactly numRows rows; we report at numRows=500k.
-    // For per-param-tuple throughput, the reporter computes it from the @Param values exposed in JSON.
-    final Map<String, Long> unitsPerOpAtBaseline = new HashMap<>();
-    unitsPerOpAtBaseline.put("icebergArrowInputSourceReader", 500_000L);
-    unitsPerOpAtBaseline.put("icebergInputSourceReader", 500_000L);
+    // Both scenarios produce exactly numRows rows per op — derive units/op from the JMH @Param tuple.
     BenchmarkReporter.runAndReport(
         IcebergReaderBenchmark.class,
         "icebergInputSourceReader",
-        unitsPerOpAtBaseline
+        (scenario, params) -> Long.parseLong(params.get("numRows"))
     );
   }
 
