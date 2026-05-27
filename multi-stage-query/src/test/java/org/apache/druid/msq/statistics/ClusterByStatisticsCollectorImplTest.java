@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.math.LongMath;
+import org.apache.datasketches.quantiles.ItemsSketch;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
@@ -46,6 +47,7 @@ import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
@@ -71,6 +73,13 @@ import java.util.stream.LongStream;
 public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlingTest
 {
   private static final double PARTITION_SIZE_LEEWAY = 0.35;
+
+  @Before
+  public void pinSketchSeed()
+  {
+    // Pin DataSketches' shared RNG so QuantilesSketchKeyCollector estimates are deterministic.
+    ItemsSketch.rand.setSeed(1L);
+  }
 
   private static final RowSignature SIGNATURE = RowSignature.builder()
                                                             .add("x", ColumnType.LONG)
