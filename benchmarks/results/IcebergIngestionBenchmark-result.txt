@@ -12,4 +12,3 @@ Baseline: icebergInputSourceReader_ingest
 ================================================================================
 Summary:  best 1.16x ({numColumns=5, numRows=100000}) | worst 1.16x ({numColumns=5, numRows=100000}) | geomean 1.16x
 ================================================================================
-
