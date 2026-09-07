@@ -116,6 +116,7 @@ public class IcebergIngestionBenchmark
 {
   private static final String NAMESPACE = "bench";
   private static final String TABLE = "benchTable";
+  private static final int ARROW_BATCH_SIZE = 1024;
   private static final ObjectMapper JSON_MAPPER;
   private static final IndexMergerV9 INDEX_MERGER_V9;
 
@@ -195,7 +196,7 @@ public class IcebergIngestionBenchmark
         null,
         true,
         inputRowSchema,
-        IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
+        ARROW_BATCH_SIZE
     );
     BenchmarkRunner.measureAndVerify(
         ingestSubject("icebergArrowInputSourceReader_ingest", reader),

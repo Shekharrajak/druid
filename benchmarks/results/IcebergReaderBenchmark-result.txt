@@ -1,6 +1,6 @@
 ================================================================================
 IcebergReaderBenchmark
-Generated: 2026-05-23T11:25:43.786205Z
+Generated: 2026-09-07T09:18:29.664693Z
 JMH: avg time per op (ms)
 Throughput unit: rows/s
 Baseline: icebergInputSourceReader
@@ -8,11 +8,11 @@ Baseline: icebergInputSourceReader
 
 | numColumns | numRows    | icebergArrowInputSourceReader (ms / throughput) | icebergInputSourceReader (ms / throughput)   | Speedup  |
 |------------|------------|----------------------------------------------|----------------------------------------------|----------|
-| 15         | 100000     |    42.77 ms  2,337,824 rows/s                |    96.68 ms  1,034,291 rows/s                | 2.26x    |
-| 15         | 500000     |   190.12 ms  2,629,896 rows/s                |   418.48 ms  1,194,811 rows/s                | 2.20x    |
-| 5          | 100000     |    17.15 ms  5,830,083 rows/s                |    52.62 ms  1,900,329 rows/s                | 3.07x    |
-| 5          | 500000     |    71.18 ms  7,024,460 rows/s                |   194.02 ms  2,577,057 rows/s                | 2.73x    |
+| 15         | 100000     |    42.19 ms  2,370,416 rows/s                |    93.98 ms  1,064,110 rows/s                | 2.23x    |
+| 15         | 500000     |   188.50 ms  2,652,529 rows/s                |   397.84 ms  1,256,772 rows/s                | 2.11x    |
+| 5          | 100000     |    19.07 ms  5,244,341 rows/s                |    47.97 ms  2,084,691 rows/s                | 2.52x    |
+| 5          | 500000     |    71.74 ms  6,969,414 rows/s                |   162.70 ms  3,073,062 rows/s                | 2.27x    |
 ================================================================================
-Summary:  best 3.07x ({numColumns=5, numRows=100000}) | worst 2.20x ({numColumns=15, numRows=500000}) | geomean 2.54x
+Summary:  best 2.52x ({numColumns=5, numRows=100000}) | worst 2.11x ({numColumns=15, numRows=500000}) | geomean 2.28x
 ================================================================================
 

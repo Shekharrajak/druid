@@ -100,6 +100,7 @@ public class IcebergReaderBenchmark
 {
   private static final String NAMESPACE = "bench";
   private static final String TABLE = "benchTable";
+  private static final int ARROW_BATCH_SIZE = 1024;
 
   @Param({"100000", "500000"})
   public int numRows;
@@ -149,7 +150,7 @@ public class IcebergReaderBenchmark
         null,
         true,
         inputRowSchema,
-        IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
+        ARROW_BATCH_SIZE
     );
     BenchmarkRunner.measureAndVerify(readerSubject("icebergArrowInputSourceReader", reader), bh, numRows);
   }
