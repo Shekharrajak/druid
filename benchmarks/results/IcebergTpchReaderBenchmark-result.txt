@@ -1,0 +1,21 @@
+================================================================================
+IcebergTpchReaderBenchmark
+Generated: 2026-09-22T06:33:11.437316Z
+JMH: avg time per op (ms)
+Throughput unit: rows/s
+Baseline: icebergStandardReader
+================================================================================
+
+| tableName  | icebergArrowReader (ms / throughput)         | icebergStandardReader (ms / throughput)      | Speedup  |
+|------------|----------------------------------------------|----------------------------------------------|----------|
+| customer   |   109.38 ms  1,371,347 rows/s                |   154.00 ms  974,033 rows/s                  | 1.41x    |
+| lineitem   |  5239.64 ms  1,145,348 rows/s                |  5003.78 ms  1,199,336 rows/s                | 0.95x    |
+| nation     |     4.02 ms  6,222 rows/s                    |    18.30 ms  1,366 rows/s                    | 4.55x    |
+| orders     |   829.52 ms  1,808,268 rows/s                |   868.91 ms  1,726,293 rows/s                | 1.05x    |
+| partsupp   |   351.57 ms  2,275,521 rows/s                |   377.68 ms  2,118,222 rows/s                | 1.07x    |
+| part       |   130.34 ms  1,534,486 rows/s                |   156.57 ms  1,277,363 rows/s                | 1.20x    |
+| region     |     3.76 ms  1,330 rows/s                    |    18.50 ms  270 rows/s                      | 4.92x    |
+| supplier   |    16.53 ms  604,977 rows/s                  |    45.95 ms  217,608 rows/s                  | 2.78x    |
+================================================================================
+Summary:  best 4.92x ({tableName=region}) | worst 0.95x ({tableName=lineitem}) | geomean 1.81x
+================================================================================
