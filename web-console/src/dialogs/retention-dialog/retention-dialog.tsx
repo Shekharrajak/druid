@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Divider, FormGroup, Intent } from '@blueprintjs/core';
+import { Button, Callout, Divider, FormGroup, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
@@ -52,7 +52,7 @@ export const RetentionDialog = React.memo(function RetentionDialog(props: Retent
   const [currentRules, setCurrentRules] = useState(props.rules);
   const [jsonError, setJsonError] = useState<Error | undefined>();
 
-  const [tiersState] = useQueryManager<Capabilities, string[]>({
+  const [tiersState, tiersQueryManager] = useQueryManager<Capabilities, string[]>({
     initQuery: capabilities,
     processQuery: async (capabilities, signal) => {
       if (capabilities.hasSql()) {
@@ -103,7 +103,7 @@ ORDER BY 1`,
     setCurrentRules(
       currentRules.concat({
         type: 'loadForever',
-        tieredReplicants: { [tiers[0]]: 2 },
+        tieredReplicants: { [tiers[0] ?? '_default_tier']: 2 },
       }),
     );
   }
@@ -192,10 +192,24 @@ ORDER BY 1`,
                 <Button
                   icon={IconNames.PLUS}
                   onClick={addRule}
+                  disabled={!tiersState.data}
                   intent={currentRules.length ? undefined : Intent.PRIMARY}
                 >
                   New rule
                 </Button>
+                {tiersState.error && (
+                  <Callout
+                    intent={Intent.DANGER}
+                    role="alert"
+                    title="Could not load historical tiers"
+                  >
+                    <p>{tiersState.error.message}</p>
+                    <Button
+                      text="Retry tier lookup"
+                      onClick={() => tiersQueryManager.rerunLastQuery()}
+                    />
+                  </Callout>
+                )}
               </div>
             </FormGroup>
             {defaultRuleRender && <Divider />}
